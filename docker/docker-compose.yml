@@ -47,6 +47,9 @@ services:
     depends_on:
       ecosystem:
         condition: service_healthy
+    # Helps when proxy.golang.org drops connections during `go mod download` / air rebuild.
+    environment:
+      - GOPROXY=https://proxy.golang.org,https://goproxy.io,direct
     volumes:
       # CasaOS repository root (parent of this docker/ directory)
       - ../:/src
