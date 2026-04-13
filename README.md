@@ -163,7 +163,23 @@ To determine version of CasaOS from a terminal session run this command:
 casaos -v
 ```
 
+### Fork install / UI patch (this repo)
 
+If you maintain a **fork** (e.g. UI + optional backend changes), the usual flow is simpler than a full manual deploy:
+
+1. Build the UI: in **CasaOS-UI**, run `pnpm install && pnpm run build`.
+2. On the machine where CasaOS is already installed (**official** install via `get.casaos.io` above), copy the built `www` folder or `git pull` your fork and build there.
+3. Run the helper script (copies static files to `/var/lib/casaos/www`):
+
+   ```sh
+   sudo bash scripts/fork/apply-ui-build.sh /path/to/CasaOS-UI/build/sysroot/var/lib/casaos/www
+   ```
+
+   See [scripts/fork/README.md](scripts/fork/README.md) for defaults and one-liner **install official + apply fork UI**.
+
+**Warning — Settings → Update:** The WebUI **Update** button uses the **upstream** IceWhale channel. It may **replace** your fork’s files with the official release. To refresh your fork, use **git pull + rebuild + `apply-ui-build.sh`**. To return to upstream on purpose, use the official `get.casaos.io/update` commands in this README.
+
+The official one-liners below remain the reference for **stock** CasaOS install and update.
 
 ### Uninstall CasaOS
 

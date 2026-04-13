@@ -58,6 +58,24 @@ docker compose up -d --build
 
 **Nota:** el contenedor `ecosystem` monta **`/var/run/docker.sock`** para que App Management pueda listar contenedores y el grid de apps funcione.
 
+### Si `http://localhost:4080/` devuelve `{"message":"Not Found"}` o el navegador dice “invalid response”
+
+El Gateway solo sirve la SPA en `/` si **`/var/lib/casaos/www/index.html`** existe **dentro** del contenedor `ecosystem`. Esa ruta es un **bind mount** a `CasaOS/build/sysroot/var/lib/casaos/www/`.
+
+1. Comprueba en el host que exista **`CasaOS/build/sysroot/var/lib/casaos/www/index.html`** (tras `pnpm build` en **CasaOS-UI** y copiar/rsync al árbol **CasaOS**, como arriba).
+2. Si borraste o recreaste esa carpeta **con el contenedor ya en marcha**, el mount de Docker puede quedar colgado (en Linux a veces aparece como `//deleted` en `findmnt`). **Reinicia el stack** para volver a enlazar la ruta:
+   ```bash
+   cd CasaOS/docker
+   docker compose restart ecosystem
+   # o: docker compose down && docker compose up -d
+   ```
+3. Verificación rápida:
+   ```bash
+   docker exec casaos-ecosystem ls -la /var/lib/casaos/www/index.html
+   curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4080/
+   ```
+   Deberías ver el fichero y código **200**.
+
 ### UI empaquetada en el puerto 4080 (obligatorio antes del primer `up`)
 
 El `docker-compose.yml` monta **`../build/sysroot/var/lib/casaos/www`** (desde la raíz del repo **CasaOS**) en **`/var/lib/casaos/www`**. Así **http://localhost:4080** usa la misma UI que instalarías en un host con tu fork.
