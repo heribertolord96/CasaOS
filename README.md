@@ -165,17 +165,19 @@ casaos -v
 
 ### Fork install / UI patch (this repo)
 
-If you maintain a **fork** (e.g. UI + optional backend changes), the usual flow is simpler than a full manual deploy:
+If you maintain a **fork** (e.g. UI + optional backend changes), the base is still **official CasaOS**; the fork ships the **built Web UI** into `/var/lib/casaos/www`.
 
-1. Build the UI: in **CasaOS-UI**, run `pnpm install && pnpm run build`.
-2. On the machine where CasaOS is already installed (**official** install via `get.casaos.io` above), copy the built `www` folder or `git pull` your fork and build there.
-3. Run the helper script (copies static files to `/var/lib/casaos/www`):
+1. Confirm the binary is present: `which casaos` (typically `/usr/bin/casaos`).
+2. Clone **CasaOS** and **CasaOS-UI** (sibling folders), e.g. `~/src/CasaOS` and `~/src/CasaOS-UI`.
+3. From the **CasaOS** clone, build and apply in one step:
 
    ```sh
-   sudo bash scripts/fork/apply-ui-build.sh /path/to/CasaOS-UI/build/sysroot/var/lib/casaos/www
+   bash scripts/fork/install-fork-ui.sh
    ```
 
-   See [scripts/fork/README.md](scripts/fork/README.md) for defaults and one-liner **install official + apply fork UI**.
+   Or only copy an already-built `www`: `sudo bash scripts/fork/apply-ui-build.sh /path/to/CasaOS-UI/build/sysroot/var/lib/casaos/www`
+
+   Full layout, clean reinstall, and when you can delete the clone: [scripts/fork/README.md](scripts/fork/README.md).
 
 **Warning — Settings → Update:** The WebUI **Update** button uses the **upstream** IceWhale channel. It may **replace** your fork’s files with the official release. To refresh your fork, use **git pull + rebuild + `apply-ui-build.sh`**. To return to upstream on purpose, use the official `get.casaos.io/update` commands in this README.
 

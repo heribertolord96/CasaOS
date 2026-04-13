@@ -1,53 +1,127 @@
-# Scripts del fork (UI → instalación corriente)
+# Fork: UI sobre instalación oficial
 
-Flujo simple:
+Este fork **no sustituye** el paquete `casaos` de IceWhale por otro instalador propio. Lo que instalas en el sistema es **CasaOS oficial**; aquí aportas la **interfaz web** (archivos estáticos en `/var/lib/casaos/www`). El modo “como en local en el puerto 4080” es el **mismo build** de `CasaOS-UI`, aplicado al host en lugar del dev server.
 
-1. En tu máquina (o CI): en el repo **CasaOS-UI**, `pnpm install && pnpm run build`.
-2. Lleva la carpeta generada  
-   `CasaOS-UI/build/sysroot/var/lib/casaos/www/`  
-   al servidor (scp, rsync, USB, etc.), **o** haz `git pull` del fork y compila allí.
-3. En el servidor con CasaOS ya instalado:
+## Comprobar que CasaOS está instalado
 
-   ```bash
-   cd /ruta/al/clon/CasaOS
-   sudo bash scripts/fork/apply-ui-build.sh /ruta/al/www-compilado
-   ```
+En el host:
 
-   Si el build está en la ruta por defecto (`../CasaOS-UI/build/.../www` respecto a **CasaOS**):
+```bash
+which casaos    # ej. /usr/bin/casaos
+casaos -v
+```
 
-   ```bash
-   sudo CASA_UI_BUILD=/home/tu/CasaOS-UI/build/sysroot/var/lib/casaos/www bash scripts/fork/apply-ui-build.sh
-   ```
+Si no hay binario, instala la base **oficial** primero:
 
-## Instalar oficial y parchear UI en un solo paso
+```bash
+curl -fsSL https://get.casaos.io | sudo bash
+```
 
-En un sistema **sin** CasaOS previo (o si quieres reinstalar base oficial y luego poner la UI del fork):
+## Layout de directorios (recomendado)
+
+Clona tu fork en dos repos **hermanos** (misma carpeta padre):
+
+```text
+~/src/
+  CasaOS/      ← este repo (scripts en scripts/fork/)
+  CasaOS-UI/   ← repo de la interfaz
+```
+
+Si `CasaOS-UI` está en otra ruta:
+
+```bash
+export CASA_UI_ROOT=/ruta/absoluta/a/CasaOS-UI
+bash scripts/fork/install-fork-ui.sh
+```
+
+## Un solo script: compilar y aplicar la UI
+
+Desde el clon de **CasaOS** (sin `sudo` al principio; `sudo` solo al copiar a `/var/lib/casaos/www`):
+
+```bash
+cd ~/src/CasaOS
+bash scripts/fork/install-fork-ui.sh
+```
+
+Hace: `pnpm install` + `pnpm run build` en **CasaOS-UI** y luego ejecuta **`apply-ui-build.sh`** con `sudo` (copia con backup a `/var/lib/casaos/www`).
+
+Solo compilar, sin tocar el sistema:
+
+```bash
+bash scripts/fork/install-fork-ui.sh --build-only
+```
+
+Si ya tienes el `www` generado y solo quieres copiarlo:
+
+```bash
+sudo bash scripts/fork/apply-ui-build.sh /ruta/a/CasaOS-UI/build/sysroot/var/lib/casaos/www
+sudo systemctl restart casaos-gateway
+```
+
+### Instalar base oficial y luego el fork (máquina casi vacía)
+
+Si **no** hay `casaos` aún, usa (todo con `sudo`; instala IceWhale y aplica el `www` que indiques):
 
 ```bash
 sudo bash scripts/fork/install-official-then-apply-ui.sh /ruta/al/www
 ```
 
+Si **sí** hay `casaos`, ese script solo aplica la UI (igual que `apply-ui-build.sh`).
+
+## ¿Puedo borrar el directorio del repo clonado después?
+
+**Sí**, para el **funcionamiento diario** de CasaOS no hace falta dejar el clon en el disco: los archivos ya están en `/var/lib/casaos/www`.
+
+Conviene **mantener** un clon (o volver a `git clone`) cuando quieras **actualizar el fork** (`git pull` → `install-fork-ui.sh` de nuevo). Si borras el clon, en la próxima actualización vuelves a clonar o copias el script `apply-ui-build.sh` y una carpeta `www` ya compilada.
+
+## Reinstalación limpia (base oficial) conservando datos
+
+1. **Backup** (obligatorio):
+
+   ```bash
+   sudo tar -czvf "casaos-backup-$(date +%F).tar.gz" /var/lib/casaos /etc/casaos
+   ```
+
+2. **Desinstalar** (ver [README principal](../../README.md)):
+
+   ```bash
+   sudo casaos-uninstall
+   ```
+
+   Para **no** perder apps Docker ni datos: responde **`n`** a eliminar todos los contenedores y **`n`** a borrar AppData en `/DATA/AppData` si te interesa conservarlos.
+
+3. **Instalar de nuevo** la base oficial:
+
+   ```bash
+   curl -fsSL https://get.casaos.io | sudo bash
+   ```
+
+4. **Aplicar la UI del fork** (clon con `CasaOS` + `CasaOS-UI` como arriba):
+
+   ```bash
+   cd /ruta/al/CasaOS
+   bash scripts/fork/install-fork-ui.sh
+   ```
+
+5. **Volver al upstream** (paquetes + UI oficial), sin reinstalar a mano:
+
+   ```bash
+   curl -fsSL https://get.casaos.io/update | sudo bash
+   ```
+
+   Luego puedes volver a ejecutar `install-fork-ui.sh` si quieres otra vez la UI del fork.
+
+**Nota:** una reinstalación limpia **no corrige** iframes con URL `http://localhost:…` vistos desde **otro** equipo; usa **hostname o IP del servidor** en la Web UI de cada app.
+
 ## Advertencia: Ajustes → Actualizar
 
-En la interfaz, **Configuración → Actualizar** usa el canal de **IceWhale**. Eso puede **sustituir** tu UI (y el paquete `casaos`) por la versión oficial y **deshacer el fork** en el navegador.
+En la interfaz, **Configuración → Actualizar** usa el canal **IceWhale** y puede **sustituir** tu UI por la oficial. Para refrescar el fork: `git pull`, `install-fork-ui.sh` (o build manual + `apply-ui-build.sh`).
 
-- Para actualizar el fork: **git pull** + volver a **build** + `apply-ui-build.sh`.
-- Para volver al upstream a propósito: usa los comandos oficiales del README (`get.casaos.io` / `update`).
+## Git en el servidor y `curl` al `.sh`
 
-## Git: commit, push y aplicar en el servidor
+- Para **actualizar fuentes**: `git pull` en **CasaOS** y **CasaOS-UI**.
+- Puedes descargar solo un `.sh` con `curl` desde la URL *raw* de GitHub **sin** clonar, pero el **`www`** compilado no viene en ese download; hace falta build local o copiar la carpeta generada.
 
-1. **En tu máquina:** haz **commit y push** de los cambios del fork (código, scripts, docs). Lo habitual es **no** versionar la carpeta `www` compilada (artefacto generado; suele estar en `.gitignore`). Si prefieres subir el build al repo, es posible, pero aumenta el tamaño del clon.
-2. **En la máquina con CasaOS instalado:** `git pull` del fork (repos **CasaOS** y **CasaOS-UI** si trabajas con ambos en el mismo host), luego en **CasaOS-UI** ejecuta `pnpm install && pnpm run build`, y finalmente `apply-ui-build.sh` apuntando al `www` generado.
+## Comandos oficiales
 
-Alternativa sin compilar en el servidor: generas el `www` en tu PC, lo copias con `rsync`/`scp` al destino y ejecutas el script con esa ruta.
-
-### ¿Hace falta `git pull` antes de `curl … | bash` al `.sh`?
-
-- **Para tener el script:** no es obligatorio. Puedes descargar el script con `curl` desde la URL *raw* de GitHub/GitLab **sin** clonar el repo.
-- **Para aplicar tu UI:** el script **solo** copia una carpeta `www` que **ya debe existir** (con `index.html`). Ese contenido **no** viene del `curl` al `.sh`. Lo obtienes con `git pull` + build en el servidor, o llevando el `www` desde otra máquina.
-
-Orden lógico en destino: tener el `www` listo → ejecutar `apply-ui-build.sh` (local tras pull, o pasando la ruta si copiaste el build).
-
-## Comandos oficiales (referencia)
-
-Siguen documentados en el [README principal](../../README.md) de este repo: instalación y actualización **originales** IceWhale.
+Instalación, actualización y desinstalación “stock”: [README principal](../../README.md).
