@@ -41,3 +41,8 @@ CasaOS
 
 # System Files
 .DS_Store
+
+# Local tooling / accidental installs at repo root
+node_modules/
+tmp/
+pnpm-lock.yaml

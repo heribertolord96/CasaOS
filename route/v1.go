@@ -10,6 +10,7 @@ import (
 	"github.com/IceWhaleTech/CasaOS/common"
 	"github.com/IceWhaleTech/CasaOS/pkg/config"
 	v1 "github.com/IceWhaleTech/CasaOS/route/v1"
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	echo_middleware "github.com/labstack/echo/v4/middleware"
 )
@@ -29,8 +30,6 @@ func InitV1Router() http.Handler {
 	e.Use(echo_middleware.Recover())
 	e.Use(echo_middleware.Logger())
 
-	e.GET("/v1/sys/debug", v1.GetSystemConfigDebug) // //debug
-
 	e.GET("/v1/sys/version/check", v1.GetSystemCheckVersion)
 	e.GET("/v1/sys/version/current", func(ctx echo.Context) error {
 		return ctx.String(200, common.VERSION)
@@ -41,11 +40,11 @@ func InitV1Router() http.Handler {
 	e.GET("/v1/recover/:type", v1.GetRecoverStorage)
 	v1Group := e.Group("/v1")
 	//	e.Any("/v1/test", v1.CheckNetwork)
-	v1Group.Use(echo_middleware.JWTWithConfig(echo_middleware.JWTConfig{
+	v1Group.Use(echojwt.WithConfig(echojwt.Config{
 		Skipper: func(c echo.Context) bool {
 			return c.RealIP() == "::1" || c.RealIP() == "127.0.0.1"
 		},
-		ParseTokenFunc: func(token string, c echo.Context) (interface{}, error) {
+		ParseTokenFunc: func(c echo.Context, token string) (interface{}, error) {
 			valid, claims, err := jwt.Validate(token, func() (*ecdsa.PublicKey, error) { return external.GetPublicKey(config.CommonInfo.RuntimePath) })
 			if err != nil || !valid {
 				return nil, echo.ErrUnauthorized
@@ -91,13 +90,13 @@ func InitV1Router() http.Handler {
 			// v1SysGroup.GET("/disk", v1.GetSystemDiskInfo)
 			// v1SysGroup.GET("/network", v1.GetSystemNetInfo)
 
-			v1SysGroup.GET("/server-info", nil)
-			v1SysGroup.PUT("/server-info", nil)
 			// v1SysGroup.GET("/port", v1.GetCasaOSPort)
 			// v1SysGroup.PUT("/port", v1.PutCasaOSPort)
 			v1SysGroup.GET("/proxy", v1.GetSystemProxy)
 			v1SysGroup.PUT("/state/:state", v1.PutSystemState)
 			v1SysGroup.GET("/entry", v1.GetSystemEntry)
+			// Requires JWT — avoids exposing system diagnostics to unauthenticated LAN clients via the gateway.
+			v1SysGroup.GET("/debug", v1.GetSystemConfigDebug)
 		}
 		v1PortGroup := v1Group.Group("/port")
 		v1PortGroup.Use()

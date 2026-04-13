@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "CGO_ENABLED=1 go build -o ./tmp/casaos main.go"
+  bin = "./tmp/casaos"
+  full_bin = "./tmp/casaos"
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml"]
+  exclude_dir = ["tmp", "node_modules", "dist", "generate", "CasaOS-UI"]
+  delay = 1000
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true

@@ -1,0 +1,85 @@
+# Run from this directory: docker compose up -d --build
+# Build context is "." (this folder). Backend source: ../  ·  UI clone: ../../CasaOS-UI (sibling of CasaOS)
+
+services:
+  ecosystem:
+    build:
+      context: .
+      dockerfile: Dockerfile.ecosystem
+    container_name: casaos-ecosystem
+    ports:
+      - "4080:80"
+      - "4081:8080"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      # Skip seeding /var/lib/casaos/www from the image tarball; we bind-mount the fork build below.
+      - CASAOS_WWW_BIND=1
+    volumes:
+      - casaos-runtime:/var/run/casaos
+      - casaos-config:/etc/casaos
+      - casaos-data:/var/lib/casaos
+      - casaos-logs:/var/log/casaos
+      # Fork UI served on :4080 — run `pnpm build` in CasaOS-UI then sync/copy to CasaOS/build/sysroot/.../www
+      - ../build/sysroot/var/lib/casaos/www:/var/lib/casaos/www
+      # App Management needs Docker to list containers (/v1/container, app grid).
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "test -f /var/run/casaos/management.url && test -f /var/run/casaos/app-management.url",
+        ]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+    restart: unless-stopped
+
+  casaos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: casaos-dev
+    network_mode: "service:ecosystem"
+    depends_on:
+      ecosystem:
+        condition: service_healthy
+    volumes:
+      # CasaOS repository root (parent of this docker/ directory)
+      - ../:/src
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+      - casaos-runtime:/var/run/casaos
+      - casaos-config:/etc/casaos
+      - casaos-data:/var/lib/casaos
+      - casaos-logs:/var/log/casaos
+      # Same fork UI as ecosystem (LocalStorage / modules paths stay consistent)
+      - ../build/sysroot/var/lib/casaos/www:/var/lib/casaos/www
+    restart: unless-stopped
+
+  ui-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: casaos-ui-dev
+    network_mode: "service:ecosystem"
+    depends_on:
+      ecosystem:
+        condition: service_healthy
+    volumes:
+      # Sibling clone: parent-of-CasaOS/CasaOS-UI — override if your layout differs
+      - ../../CasaOS-UI:/app
+      - ui-node-modules:/app/node_modules
+    restart: unless-stopped
+
+volumes:
+  casaos-runtime:
+  go-mod-cache:
+  go-build-cache:
+  casaos-config:
+  casaos-data:
+  casaos-logs:
+  ui-node-modules:

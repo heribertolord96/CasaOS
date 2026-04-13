@@ -1,0 +1,11 @@
+FROM node:18-bookworm-slim
+
+RUN corepack enable && corepack prepare pnpm@9.0.6 --activate
+
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+EXPOSE 8080
+
+CMD ["sh", "-c", "pnpm install && pnpm dev"]

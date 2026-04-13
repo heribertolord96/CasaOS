@@ -1,0 +1,42 @@
+FROM debian:bookworm-slim
+
+ARG GATEWAY_VERSION=v0.4.9-alpha4
+ARG MESSAGEBUS_VERSION=v0.4.4-3-alpha2
+ARG USERSERVICE_VERSION=v0.4.8
+ARG LOCALSTORAGE_VERSION=v0.4.4
+ARG APPMANAGEMENT_VERSION=v0.4.10-alpha2
+ARG UI_VERSION=v0.4.25
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/casaos /var/lib/casaos/db /var/lib/casaos/conf \
+             /var/lib/casaos/www /var/log/casaos /var/run/casaos \
+             /usr/share/casaos/shell /tmp/casaos-setup
+
+WORKDIR /tmp/casaos-setup
+
+RUN curl -fsSL "https://github.com/IceWhaleTech/CasaOS-Gateway/releases/download/${GATEWAY_VERSION}/linux-amd64-casaos-gateway-${GATEWAY_VERSION}.tar.gz" \
+    | tar xz --strip-components=2 -C / && \
+    curl -fsSL "https://github.com/IceWhaleTech/CasaOS-MessageBus/releases/download/${MESSAGEBUS_VERSION}/linux-amd64-casaos-message-bus-${MESSAGEBUS_VERSION}.tar.gz" \
+    | tar xz --strip-components=2 -C / && \
+    curl -fsSL "https://github.com/IceWhaleTech/CasaOS-UserService/releases/download/${USERSERVICE_VERSION}/linux-amd64-casaos-user-service-${USERSERVICE_VERSION}.tar.gz" \
+    | tar xz --strip-components=2 -C / && \
+    curl -fsSL "https://github.com/IceWhaleTech/CasaOS-LocalStorage/releases/download/${LOCALSTORAGE_VERSION}/linux-amd64-casaos-local-storage-${LOCALSTORAGE_VERSION}.tar.gz" \
+    | tar xz --strip-components=2 -C / && \
+    curl -fsSL "https://github.com/IceWhaleTech/CasaOS-AppManagement/releases/download/${APPMANAGEMENT_VERSION}/linux-amd64-casaos-app-management-${APPMANAGEMENT_VERSION}.tar.gz" \
+    | tar xz --strip-components=2 -C / && \
+    curl -fsSL "https://github.com/IceWhaleTech/CasaOS-UI/releases/download/${UI_VERSION}/linux-all-casaos-${UI_VERSION}.tar.gz" \
+    | tar xz --strip-components=2 -C /
+
+RUN cp -a /var/lib/casaos/www /opt/casaos-www && \
+    cp -a /etc/casaos /opt/casaos-etc && \
+    rm -rf /tmp/casaos-setup
+
+COPY ecosystem-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 80
+
+ENTRYPOINT ["/entrypoint.sh"]
