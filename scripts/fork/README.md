@@ -111,7 +111,7 @@ Conviene **mantener** un clon (o volver a `git clone`) cuando quieras **actualiz
 
    Luego puedes volver a ejecutar `install-fork-ui.sh` si quieres otra vez la UI del fork.
 
-**Nota:** una reinstalación limpia **no corrige** iframes con URL `http://localhost:…` vistos desde **otro** equipo; usa **hostname o IP del servidor** en la Web UI de cada app.
+**Nota (embeds):** si abres CasaOS por **hostname** (p. ej. `dell.local`) y la app sigue guardada como `http://localhost:puerto`, la UI del fork **reescribe** ese host al de la página para el iframe (así el destino es el servidor, no el PC del navegador). Si aun así falla, revisa el puerto publicado y que el servicio escuche en `0.0.0.0`, o configura la URL de la app con **IP/hostname** del host.
 
 ## Advertencia: Ajustes → Actualizar
 
